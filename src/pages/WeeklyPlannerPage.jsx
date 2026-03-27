@@ -10,15 +10,19 @@ import {
   Select,
   Space,
   Tag,
+  Typography,
 } from 'antd'
 import { useDispatch, useSelector } from 'react-redux'
 import { PageSection } from '../components/PageSection.jsx'
+
+const { Text } = Typography
 import {
   addExtraItem,
   deleteExtraItem,
   setMealsForDay,
   setWeekLabel,
   toggleExtraItemChecked,
+  updateExtraItem,
   updatePlanNotes,
 } from '../features/planner/plannerSlice.js'
 import { dayOptions } from '../utils/dayOptions.js'
@@ -121,18 +125,42 @@ export function WeeklyPlannerPage() {
           renderItem={(item) => (
             <List.Item
               actions={[
-                <Button key="toggle" type={item.checked ? 'default' : 'primary'} onClick={() => dispatch(toggleExtraItemChecked(item.id))}>
+                <Button
+                  key="toggle"
+                  type={item.checked ? 'default' : 'primary'}
+                  onClick={() => dispatch(toggleExtraItemChecked(item.id))}
+                >
                   {item.checked ? 'Bỏ đánh dấu' : 'Đánh dấu đã có'}
                 </Button>,
-                <Button key="delete" danger icon={<DeleteOutlined />} onClick={() => dispatch(deleteExtraItem(item.id))} />,
+                <Button
+                  key="delete"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => dispatch(deleteExtraItem(item.id))}
+                />,
               ]}
             >
-              <Space direction="vertical" size={4}>
+              <Space direction="vertical" size={8} style={{ width: '100%' }}>
                 <Space wrap>
                   <strong>{item.name}</strong>
                   {item.checked ? <Tag color="green">Đã có / đã xử lý</Tag> : null}
                 </Space>
-                {item.note ? <span className="helper-text">{item.note}</span> : null}
+                <Input
+                  value={item.note}
+                  placeholder="Ghi chú, ví dụ: đã có ở nhà"
+                  onChange={(event) =>
+                    dispatch(
+                      updateExtraItem({
+                        id: item.id,
+                        name: item.name,
+                        note: event.target.value,
+                      }),
+                    )
+                  }
+                />
+                <Text className="helper-text">
+                  Tip: phần note này sẽ hiện lại ở Shopping Checklist.
+                </Text>
               </Space>
             </List.Item>
           )}

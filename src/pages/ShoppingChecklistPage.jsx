@@ -1,5 +1,5 @@
 import { CheckCircleOutlined, ShoppingCartOutlined } from '@ant-design/icons'
-import { Col, Empty, List, Row, Space, Tag, Typography } from 'antd'
+import { Col, Empty, Row, Space, Statistic, Tag, Typography } from 'antd'
 import { useSelector } from 'react-redux'
 import { PageSection } from '../components/PageSection.jsx'
 import { selectChecklistItems } from '../features/planner/plannerSlice.js'
@@ -20,15 +20,29 @@ export function ShoppingChecklistPage() {
 
   return (
     <Row gutter={[16, 16]}>
+      <Col xs={24} md={8}>
+        <PageSection>
+          <Statistic title="Tổng item cần xử lý" value={checklistItems.length} />
+        </PageSection>
+      </Col>
+      <Col xs={24} md={8}>
+        <PageSection>
+          <Statistic title="Nguyên liệu từ thực đơn" value={ingredientItems.length} />
+        </PageSection>
+      </Col>
+      <Col xs={24} md={8}>
+        <PageSection>
+          <Statistic title="Mua thêm" value={extraItems.length} />
+        </PageSection>
+      </Col>
       <Col xs={24} xl={14}>
         <PageSection
           title="Nguyên liệu cần mua"
           description="Gom từ tất cả món đã chọn trong Weekly Planner. Các nguyên liệu trùng sẽ được gộp lại."
         >
-          <List
-            dataSource={ingredientItems}
-            renderItem={(item) => (
-              <List.Item>
+          <Space direction="vertical" size={12} style={{ width: '100%' }}>
+            {ingredientItems.map((item) => (
+              <PageSection key={item.id}>
                 <Space direction="vertical" size={6} style={{ width: '100%' }}>
                   <Space wrap>
                     <ShoppingCartOutlined />
@@ -45,9 +59,9 @@ export function ShoppingChecklistPage() {
                     Dùng cho: {Array.from(new Set(item.mealNames)).join(', ')}
                   </Text>
                 </Space>
-              </List.Item>
-            )}
-          />
+              </PageSection>
+            ))}
+          </Space>
         </PageSection>
       </Col>
       <Col xs={24} xl={10}>
@@ -55,10 +69,9 @@ export function ShoppingChecklistPage() {
           title="Mua thêm"
           description="Danh sách riêng cho các món ngoài thực đơn tuần."
         >
-          <List
-            dataSource={extraItems}
-            renderItem={(item) => (
-              <List.Item>
+          <Space direction="vertical" size={12} style={{ width: '100%' }}>
+            {extraItems.map((item) => (
+              <PageSection key={item.id}>
                 <Space direction="vertical" size={6} style={{ width: '100%' }}>
                   <Space wrap>
                     {item.checked ? <CheckCircleOutlined style={{ color: '#52c41a' }} /> : <ShoppingCartOutlined />}
@@ -67,9 +80,9 @@ export function ShoppingChecklistPage() {
                   </Space>
                   {item.note ? <Text className="helper-text">{item.note}</Text> : null}
                 </Space>
-              </List.Item>
-            )}
-          />
+              </PageSection>
+            ))}
+          </Space>
         </PageSection>
       </Col>
     </Row>
