@@ -1,8 +1,13 @@
 import { CheckCircleOutlined, ShoppingCartOutlined } from '@ant-design/icons'
-import { Col, Empty, Row, Space, Statistic, Tag, Typography } from 'antd'
-import { useSelector } from 'react-redux'
+import { Button, Col, Empty, Input, Row, Segmented, Space, Statistic, Tag, Typography } from 'antd'
+import { useDispatch, useSelector } from 'react-redux'
 import { PageSection } from '../components/PageSection.jsx'
-import { selectChecklistItems } from '../features/planner/plannerSlice.js'
+import {
+  selectFilteredChecklistItems,
+  setChecklistFilter,
+  toggleChecklistItemChecked,
+  updateChecklistItemNote,
+} from '../features/planner/plannerSlice.js'
 import { dayOptions } from '../utils/dayOptions.js'
 
 const { Text } = Typography
@@ -10,7 +15,9 @@ const { Text } = Typography
 const getDayLabel = (dayKey) => dayOptions.find((day) => day.key === dayKey)?.label ?? dayKey
 
 export function ShoppingChecklistPage() {
-  const checklistItems = useSelector(selectChecklistItems)
+  const dispatch = useDispatch()
+  const checklistItems = useSelector(selectFilteredChecklistItems)
+  const checklistFilter = useSelector((state) => state.planner.checklistFilter)
   const ingredientItems = checklistItems.filter((item) => item.source === 'ingredient')
   const extraItems = checklistItems.filter((item) => item.source === 'extra')
 
@@ -20,9 +27,25 @@ export function ShoppingChecklistPage() {
 
   return (
     <Row gutter={[16, 16]}>
+      <Col xs={24}>
+        <PageSection
+          title="Bộ lọc checklist"
+          description="Dùng để tập trung vào những món còn phải mua hoặc những món đã xử lý xong."
+        >
+          <Segmented
+            value={checklistFilter}
+            onChange={(value) => dispatch(setChecklistFilter(value))}
+            options={[
+              { label: 'Tất cả', value: 'all' },
+              { label: 'Chưa xong', value: 'pending' },
+              { label: 'Đã xong', value: 'done' },
+            ]}
+          />
+        </PageSection>
+      </Col>
       <Col xs={24} md={8}>
         <PageSection>
-          <Statistic title="Tổng item cần xử lý" value={checklistItems.length} />
+          <Statistic title="Tổng item đang hiển thị" value={checklistItems.length} />
         </PageSection>
       </Col>
       <Col xs={24} md={8}>
@@ -43,10 +66,11 @@ export function ShoppingChecklistPage() {
           <Space direction="vertical" size={12} style={{ width: '100%' }}>
             {ingredientItems.map((item) => (
               <PageSection key={item.id}>
-                <Space direction="vertical" size={6} style={{ width: '100%' }}>
+                <Space direction="vertical" size={10} style={{ width: '100%' }}>
                   <Space wrap>
-                    <ShoppingCartOutlined />
+                    {item.checked ? <CheckCircleOutlined style={{ color: '#52c41a' }} /> : <ShoppingCartOutlined />}
                     <strong>{item.name}</strong>
+                    {item.checked ? <Tag color="green">Đã xong</Tag> : <Tag color="blue">Chưa xong</Tag>}
                   </Space>
                   <Space wrap>
                     {item.dayKeys.map((dayKey) => (
@@ -58,6 +82,16 @@ export function ShoppingChecklistPage() {
                   <Text className="helper-text">
                     Dùng cho: {Array.from(new Set(item.mealNames)).join(', ')}
                   </Text>
+                  <Input
+                    value={item.note}
+                    placeholder="Ghi chú cho item này"
+                    onChange={(event) =>
+                      dispatch(updateChecklistItemNote({ id: item.id, note: event.target.value }))
+                    }
+                  />
+                  <Button onClick={() => dispatch(toggleChecklistItemChecked(item.id))}>
+                    {item.checked ? 'Đánh dấu chưa xong' : 'Đánh dấu đã xong'}
+                  </Button>
                 </Space>
               </PageSection>
             ))}
@@ -72,13 +106,22 @@ export function ShoppingChecklistPage() {
           <Space direction="vertical" size={12} style={{ width: '100%' }}>
             {extraItems.map((item) => (
               <PageSection key={item.id}>
-                <Space direction="vertical" size={6} style={{ width: '100%' }}>
+                <Space direction="vertical" size={10} style={{ width: '100%' }}>
                   <Space wrap>
                     {item.checked ? <CheckCircleOutlined style={{ color: '#52c41a' }} /> : <ShoppingCartOutlined />}
                     <strong>{item.name}</strong>
                     {item.checked ? <Tag color="green">Đã có</Tag> : <Tag color="gold">Cần mua</Tag>}
                   </Space>
-                  {item.note ? <Text className="helper-text">{item.note}</Text> : null}
+                  <Input
+                    value={item.note}
+                    placeholder="Ghi chú cho item này"
+                    onChange={(event) =>
+                      dispatch(updateChecklistItemNote({ id: item.id, note: event.target.value }))
+                    }
+                  />
+                  <Button onClick={() => dispatch(toggleChecklistItemChecked(item.id))}>
+                    {item.checked ? 'Đánh dấu chưa xong' : 'Đánh dấu đã xong'}
+                  </Button>
                 </Space>
               </PageSection>
             ))}

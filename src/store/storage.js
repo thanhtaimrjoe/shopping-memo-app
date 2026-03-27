@@ -22,3 +22,11 @@ export function saveState(state) {
     // ignore write errors for now
   }
 }
+
+export function clearState() {
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+  } catch {
+    // ignore write errors for now
+  }
+}

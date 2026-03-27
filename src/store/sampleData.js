@@ -62,7 +62,7 @@ export const initialProducts = [
   { id: 'product-banh-bao', name: 'Bánh bao' },
 ]
 
-export const initialWeeklyPlan = {
+export const createInitialWeeklyPlan = () => ({
   id: 'plan-week-2026-03-23',
   weekLabel: '23/03 - 27/03',
   notes: '',
@@ -101,4 +101,4 @@ export const initialWeeklyPlan = {
       note: '',
     },
   ],
-}
+})

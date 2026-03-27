@@ -2,6 +2,7 @@ import { InboxOutlined } from '@ant-design/icons'
 import { Alert, Button, Col, Row, Space, Typography, Upload, message } from 'antd'
 import { useState } from 'react'
 import { useDispatch } from 'react-redux'
+import { DataControls } from '../components/DataControls.jsx'
 import { PageSection } from '../components/PageSection.jsx'
 import { replaceMeals } from '../features/meals/mealsSlice.js'
 import { replacePlan } from '../features/planner/plannerSlice.js'
@@ -133,9 +134,12 @@ export function ImportCsvPage() {
         title="3. Import vào app"
         description="Khi bấm nút này, dữ liệu hiện tại trong meals, products và weekly plan sẽ bị thay bằng dữ liệu CSV mới."
       >
-        <Button type="primary" size="large" onClick={handleImport} disabled={!isImportReady}>
-          Import CSV vào Shopping Memo App
-        </Button>
+        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <Button type="primary" size="large" onClick={handleImport} disabled={!isImportReady}>
+            Import CSV vào Shopping Memo App
+          </Button>
+          <DataControls />
+        </Space>
       </PageSection>
     </Space>
   )
