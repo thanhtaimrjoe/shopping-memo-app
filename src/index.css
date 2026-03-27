@@ -66,6 +66,7 @@ a {
 .app-header-card {
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(18, 38, 63, 0.08);
+  background: linear-gradient(135deg, #ffffff 0%, #f7f9ff 100%);
 }
 
 .app-content {
@@ -86,6 +87,7 @@ a {
 .section-card {
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(18, 38, 63, 0.08);
+  border: 1px solid rgba(63, 81, 181, 0.08);
 }
 
 .section-card .ant-card-head {
@@ -110,6 +112,19 @@ a {
 
 .helper-text {
   color: #62708a;
+}
+
+.ant-card {
+  overflow: hidden;
+}
+
+.ant-progress-inner {
+  background: rgba(63, 81, 181, 0.12);
+}
+
+.ant-upload-wrapper .ant-upload-drag {
+  border-radius: 16px;
+  background: #fafbff;
 }
 
 .tag-list {

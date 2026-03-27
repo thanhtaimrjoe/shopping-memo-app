@@ -1,5 +1,5 @@
 import { InboxOutlined } from '@ant-design/icons'
-import { Alert, Button, Col, Row, Space, Typography, Upload, message } from 'antd'
+import { Alert, Button, Col, Divider, Row, Space, Tag, Typography, Upload, message } from 'antd'
 import { useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { DataControls } from '../components/DataControls.jsx'
@@ -99,10 +99,23 @@ export function ImportCsvPage() {
             </Dragger>
 
             {databaseSummary ? (
-              <Space direction="vertical" size={4}>
+              <Space direction="vertical" size={8} style={{ width: '100%' }}>
                 <Text>Số dòng đọc được: {databaseSummary.rows}</Text>
                 <Text>Món ăn parse được: {databaseSummary.meals}</Text>
                 <Text>Sản phẩm parse được: {databaseSummary.products}</Text>
+                <Divider style={{ margin: '8px 0' }} />
+                <Text strong>Preview món ăn</Text>
+                <Space wrap>
+                  {databaseSummary.payload.meals.slice(0, 6).map((meal) => (
+                    <Tag key={meal.id} color="blue">{meal.name}</Tag>
+                  ))}
+                </Space>
+                <Text strong>Preview sản phẩm</Text>
+                <Space wrap>
+                  {databaseSummary.payload.products.slice(0, 6).map((product) => (
+                    <Tag key={product.id} color="gold">{product.name}</Tag>
+                  ))}
+                </Space>
               </Space>
             ) : null}
           </PageSection>
@@ -121,9 +134,16 @@ export function ImportCsvPage() {
             </Dragger>
 
             {weeklySummary ? (
-              <Space direction="vertical" size={4}>
+              <Space direction="vertical" size={8} style={{ width: '100%' }}>
                 <Text>Số dòng đọc được: {weeklySummary.rows}</Text>
                 <Text>Item mua thêm parse được: {weeklySummary.extraItems}</Text>
+                <Divider style={{ margin: '8px 0' }} />
+                <Text strong>Preview mua thêm</Text>
+                <Space wrap>
+                  {weeklySummary.payload.extraItems.slice(0, 8).map((item) => (
+                    <Tag key={item.id} color={item.checked ? 'green' : 'purple'}>{item.name}</Tag>
+                  ))}
+                </Space>
               </Space>
             ) : null}
           </PageSection>

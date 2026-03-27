@@ -1,4 +1,4 @@
-import { Col, List, Row, Space, Tag, Typography } from 'antd'
+import { Col, List, Progress, Row, Space, Tag, Typography } from 'antd'
 import { useMemo } from 'react'
 import { useSelector } from 'react-redux'
 import { PageSection } from '../components/PageSection.jsx'
@@ -12,6 +12,10 @@ export function DashboardPage() {
   const products = useSelector((state) => state.products.items)
   const plan = useSelector((state) => state.planner.currentPlan)
   const checklistItems = useSelector(selectChecklistItems)
+  const completedChecklistCount = checklistItems.filter((item) => item.checked).length
+  const completionPercent = checklistItems.length
+    ? Math.round((completedChecklistCount / checklistItems.length) * 100)
+    : 0
 
   const daySummary = useMemo(() => {
     return dayOptions.map((day) => ({
@@ -42,6 +46,18 @@ export function DashboardPage() {
           </PageSection>
         </Col>
       </Row>
+
+      <PageSection
+        title="Checklist progress"
+        description="Theo dõi nhanh tiến độ chuẩn bị đi siêu thị trong tuần hiện tại."
+      >
+        <Space direction="vertical" size={12} style={{ width: '100%' }}>
+          <Progress percent={completionPercent} status="active" />
+          <Text className="helper-text">
+            Đã xử lý {completedChecklistCount}/{checklistItems.length} item.
+          </Text>
+        </Space>
+      </PageSection>
 
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={14}>
