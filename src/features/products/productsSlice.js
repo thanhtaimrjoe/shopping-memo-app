@@ -39,8 +39,11 @@ const productsSlice = createSlice({
     setProductSearchText: (state, action) => {
       state.searchText = action.payload
     },
+    replaceProducts: (state, action) => {
+      state.items = action.payload
+    },
   },
 })
 
-export const { addProduct, updateProduct, deleteProduct, setProductSearchText } = productsSlice.actions
+export const { addProduct, updateProduct, deleteProduct, setProductSearchText, replaceProducts } = productsSlice.actions
 export const productsReducer = productsSlice.reducer

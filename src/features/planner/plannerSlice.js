@@ -55,6 +55,9 @@ const plannerSlice = createSlice({
     updatePlanNotes: (state, action) => {
       state.currentPlan.notes = action.payload
     },
+    replacePlan: (state, action) => {
+      state.currentPlan = action.payload
+    },
   },
 })
 
@@ -66,6 +69,7 @@ export const {
   toggleExtraItemChecked,
   deleteExtraItem,
   updatePlanNotes,
+  replacePlan,
 } = plannerSlice.actions
 
 export const plannerReducer = plannerSlice.reducer

@@ -1,6 +1,7 @@
 import {
   CalendarOutlined,
   DashboardOutlined,
+  ImportOutlined,
   ShopOutlined,
   ShoppingCartOutlined,
   UnorderedListOutlined,
@@ -39,6 +40,11 @@ const menuItems = [
     icon: <ShoppingCartOutlined />,
     label: 'Shopping Checklist',
   },
+  {
+    key: '/import',
+    icon: <ImportOutlined />,
+    label: 'Import CSV',
+  },
 ]
 
 const pageTitles = {
@@ -61,6 +67,10 @@ const pageTitles = {
   '/checklist': {
     title: 'Shopping Checklist',
     subtitle: 'Tổng hợp nguyên liệu và đồ mua thêm thành danh sách mang đi siêu thị.',
+  },
+  '/import': {
+    title: 'Import CSV',
+    subtitle: 'Nạp dữ liệu từ file CSV hiện tại của hai bạn vào app thay vì nhập tay.',
   },
 }
 
