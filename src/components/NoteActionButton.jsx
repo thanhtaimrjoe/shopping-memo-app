@@ -1,8 +1,6 @@
 import { EditOutlined, FileTextOutlined } from '@ant-design/icons'
-import { Button, Input, Modal, Space, Tooltip, Typography } from 'antd'
+import { Button, Input, Modal, Space, Tooltip } from 'antd'
 import { useState } from 'react'
-
-const { Text } = Typography
 
 export function NoteActionButton({
   note,
@@ -36,7 +34,6 @@ export function NoteActionButton({
             {iconOnly ? null : note ? editLabel : emptyLabel}
           </Button>
         </Tooltip>
-        {note ? <Text className="helper-text">{note}</Text> : null}
       </Space>
 
       <Modal

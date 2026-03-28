@@ -1,15 +1,18 @@
-import { DeleteOutlined, PlusOutlined, PictureOutlined } from '@ant-design/icons'
+import { DeleteOutlined, PictureOutlined, PlusOutlined } from '@ant-design/icons'
 import {
   Button,
   Col,
   Form,
+  Image,
   Input,
+  Modal,
   Row,
   Select,
   Space,
   Tag,
   Typography,
 } from 'antd'
+import { useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { NoteActionButton } from '../components/NoteActionButton.jsx'
 import { PageSection } from '../components/PageSection.jsx'
@@ -26,12 +29,55 @@ import {
 } from '../features/planner/plannerSlice.js'
 import { dayOptions } from '../utils/dayOptions.js'
 
+const getUniqueIngredients = (selectedMeals) => {
+  const seen = new Set()
+  const ingredients = []
+
+  selectedMeals.forEach((meal) => {
+    meal.ingredients.forEach((ingredient) => {
+      const normalizedIngredient = ingredient.trim().toLowerCase()
+
+      if (!normalizedIngredient || seen.has(normalizedIngredient)) {
+        return
+      }
+
+      seen.add(normalizedIngredient)
+      ingredients.push(ingredient)
+    })
+  })
+
+  return ingredients
+}
+
 export function WeeklyPlannerPage() {
   const dispatch = useDispatch()
   const meals = useSelector((state) => state.meals.items)
   const products = useSelector((state) => state.products.items)
   const plan = useSelector((state) => state.planner.currentPlan)
-  const [extraItemForm] = Form.useForm()
+  const [isProductPickerOpen, setIsProductPickerOpen] = useState(false)
+  const [detailDayKey, setDetailDayKey] = useState(null)
+
+  const mealsById = useMemo(() => Object.fromEntries(meals.map((meal) => [meal.id, meal])), [meals])
+
+  const extraItemNameSet = useMemo(
+    () => new Set(plan.extraItems.map((item) => item.name.trim().toLowerCase())),
+    [plan.extraItems],
+  )
+
+  const productCards = useMemo(
+    () =>
+      products.map((product) => ({
+        ...product,
+        alreadyAdded: extraItemNameSet.has(product.name.trim().toLowerCase()),
+      })),
+    [products, extraItemNameSet],
+  )
+
+  const selectedDayMeals = detailDayKey
+    ? (plan.days[detailDayKey] ?? []).map((mealId) => mealsById[mealId]).filter(Boolean)
+    : []
+  const selectedDayIngredients = getUniqueIngredients(selectedDayMeals)
+  const detailDayLabel = dayOptions.find((day) => day.key === detailDayKey)?.label ?? ''
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
@@ -71,68 +117,61 @@ export function WeeklyPlannerPage() {
         description="Một ngày có thể chọn nhiều món. App sẽ tổng hợp nguyên liệu bên phần checklist."
       >
         <Row gutter={[16, 16]}>
-          {dayOptions.map((day) => (
-            <Col xs={24} md={12} xl={8} key={day.key}>
-              <PageSection title={day.label}>
-                <Select
-                  mode="multiple"
-                  style={{ width: '100%' }}
-                  placeholder="Chọn món ăn"
-                  value={plan.days[day.key]}
-                  onChange={(mealIds) => dispatch(setMealsForDay({ dayKey: day.key, mealIds }))}
-                  options={meals.map((meal) => ({
-                    label: meal.name,
-                    value: meal.id,
-                  }))}
-                />
-              </PageSection>
-            </Col>
-          ))}
+          {dayOptions.map((day) => {
+            const selectedMeals = (plan.days[day.key] ?? []).map((mealId) => mealsById[mealId]).filter(Boolean)
+            const uniqueIngredients = getUniqueIngredients(selectedMeals)
+
+            return (
+              <Col xs={24} md={12} xl={8} key={day.key}>
+                <PageSection title={day.label}>
+                  <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                    <Select
+                      mode="multiple"
+                      showSearch
+                      optionFilterProp="label"
+                      style={{ width: '100%' }}
+                      placeholder="Chọn món ăn"
+                      value={plan.days[day.key]}
+                      onChange={(mealIds) => dispatch(setMealsForDay({ dayKey: day.key, mealIds }))}
+                      options={meals.map((meal) => ({
+                        label: meal.name,
+                        value: meal.id,
+                      }))}
+                      filterOption={(input, option) =>
+                        (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
+                      }
+                    />
+
+                    <Space style={{ width: '100%', justifyContent: 'space-between' }} wrap>
+                      <Text className="helper-text">
+                        {selectedMeals.length} món · {uniqueIngredients.length} nguyên liệu
+                      </Text>
+                      <Button
+                        type="link"
+                        style={{ paddingInline: 0 }}
+                        disabled={!selectedMeals.length}
+                        onClick={() => setDetailDayKey(day.key)}
+                      >
+                        Xem chi tiết
+                      </Button>
+                    </Space>
+                  </Space>
+                </PageSection>
+              </Col>
+            )
+          })}
         </Row>
       </PageSection>
 
       <PageSection
         title="Mua thêm"
-        description="Tổ chức theo dạng grid để sau này dễ gắn thêm hình ảnh, và vẫn tiện quản lý các món mua rời ngoài thực đơn."
+        description="Tổ chức theo dạng grid để dễ quản lý các món mua rời ngoài thực đơn."
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsProductPickerOpen(true)}>
+            Thêm từ database
+          </Button>
+        }
       >
-        <PageSection
-          title="Thêm item mới"
-          description="Tạo nhanh một card mới cho danh sách mua thêm. Sau này phần này có thể mở rộng sang upload ảnh sản phẩm."
-        >
-          <Form
-            form={extraItemForm}
-            layout="vertical"
-            onFinish={(values) => {
-              dispatch(addExtraItem(values.name))
-              extraItemForm.resetFields()
-            }}
-          >
-            <Space style={{ width: '100%' }} align="start" wrap>
-              <Form.Item
-                name="name"
-                style={{ flex: 1, minWidth: 280, marginBottom: 0 }}
-                rules={[{ required: true, message: 'Vui lòng chọn item cần mua.' }]}
-              >
-                <Select
-                  showSearch
-                  size="large"
-                  placeholder="Chọn từ Product Database"
-                  optionFilterProp="label"
-                  options={products.map((product) => ({
-                    label: product.name,
-                    value: product.name,
-                  }))}
-                />
-              </Form.Item>
-              <Form.Item style={{ marginBottom: 0 }}>
-                <Button htmlType="submit" type="primary" size="large" icon={<PlusOutlined />}>
-                  Thêm từ database
-                </Button>
-              </Form.Item>
-            </Space>
-          </Form>
-        </PageSection>
-
         <div className="extra-items-grid">
           {plan.extraItems.map((item) => (
             <PageSection
@@ -141,12 +180,21 @@ export function WeeklyPlannerPage() {
               description={item.checked ? 'Đã có / đã xử lý' : 'Đang chờ xử lý'}
             >
               <Space direction="vertical" size={12} style={{ width: '100%' }}>
-                <div className="extra-item-card__placeholder">
-                  <Space direction="vertical" size={6} align="center">
-                    <PictureOutlined style={{ fontSize: 24 }} />
-                    <span>Chỗ dành cho hình ảnh sản phẩm</span>
-                  </Space>
-                </div>
+                {item.image ? (
+                  <Image
+                    preview={false}
+                    src={item.image}
+                    alt={item.name}
+                    className="product-card__image"
+                  />
+                ) : (
+                  <div className="extra-item-card__placeholder">
+                    <Space direction="vertical" size={6} align="center">
+                      <PictureOutlined style={{ fontSize: 24 }} />
+                      <span>Chưa có hình ảnh sản phẩm</span>
+                    </Space>
+                  </div>
+                )}
 
                 <div className="extra-item-card__actions">
                   <Tag color={item.checked ? 'green' : 'gold'}>
@@ -162,6 +210,7 @@ export function WeeklyPlannerPage() {
                             id: item.id,
                             name: item.name,
                             note,
+                            image: item.image,
                           }),
                         )
                       }
@@ -193,6 +242,73 @@ export function WeeklyPlannerPage() {
           ))}
         </div>
       </PageSection>
+
+      <Modal
+        title="Product Database"
+        open={isProductPickerOpen}
+        onCancel={() => setIsProductPickerOpen(false)}
+        footer={null}
+        width={980}
+      >
+        <div className="weekly-product-picker-grid">
+          {productCards.map((product) => (
+            <div key={product.id} className="weekly-product-picker-card">
+              <div className="product-card__image-wrap">
+                {product.image ? (
+                  <Image preview={false} src={product.image} alt={product.name} className="product-card__image" />
+                ) : (
+                  <div className="product-image product-image--placeholder product-card__image-placeholder">
+                    <Space direction="vertical" size={4} align="center">
+                      <PictureOutlined />
+                      <span>Chưa có ảnh</span>
+                    </Space>
+                  </div>
+                )}
+              </div>
+
+              <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                <strong>{product.name}</strong>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  disabled={product.alreadyAdded}
+                  onClick={() => {
+                    dispatch(addExtraItem({ name: product.name, image: product.image }))
+                  }}
+                >
+                  {product.alreadyAdded ? 'Đã thêm' : 'Thêm vào Mua thêm'}
+                </Button>
+              </Space>
+            </div>
+          ))}
+        </div>
+      </Modal>
+
+      <Modal
+        title={detailDayLabel ? `Chi tiết nguyên liệu - ${detailDayLabel}` : 'Chi tiết nguyên liệu'}
+        open={Boolean(detailDayKey)}
+        onCancel={() => setDetailDayKey(null)}
+        footer={null}
+      >
+        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          {selectedDayMeals.length ? (
+            selectedDayMeals.map((meal) => (
+              <div key={meal.id}>
+                <Text strong>{meal.name}</Text>
+                <div className="tag-list" style={{ marginTop: 8 }}>
+                  {meal.ingredients.map((ingredient) => (
+                    <Tag key={`${meal.id}-${ingredient}`} color="blue">
+                      {ingredient}
+                    </Tag>
+                  ))}
+                </div>
+              </div>
+            ))
+          ) : (
+            <Text className="helper-text">Chưa có món nào được chọn cho ngày này.</Text>
+          )}
+        </Space>
+      </Modal>
     </Space>
   )
 }

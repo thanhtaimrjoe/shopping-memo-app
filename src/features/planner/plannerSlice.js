@@ -2,6 +2,20 @@ import { createSelector, createSlice } from '@reduxjs/toolkit'
 import { createInitialWeeklyPlan } from '../../store/sampleData.js'
 import { createId } from '../../utils/helpers.js'
 
+const getExtraItemPayload = (payload) => {
+  if (typeof payload === 'string') {
+    return {
+      name: payload,
+      image: '',
+    }
+  }
+
+  return {
+    name: payload?.name ?? '',
+    image: payload?.image ?? '',
+  }
+}
+
 const plannerSlice = createSlice({
   name: 'planner',
   initialState: {
@@ -19,14 +33,15 @@ const plannerSlice = createSlice({
       state.currentPlan.days[dayKey] = mealIds
     },
     addExtraItem: (state, action) => {
-      const name = action.payload.trim()
+      const { name, image } = getExtraItemPayload(action.payload)
+      const trimmedName = name.trim()
 
-      if (!name) {
+      if (!trimmedName) {
         return
       }
 
       const exists = state.currentPlan.extraItems.some(
-        (item) => item.name.trim().toLowerCase() === name.toLowerCase(),
+        (item) => item.name.trim().toLowerCase() === trimmedName.toLowerCase(),
       )
 
       if (exists) {
@@ -34,14 +49,15 @@ const plannerSlice = createSlice({
       }
 
       state.currentPlan.extraItems.unshift({
-        id: createId('extra'),
-        name,
+        id: createId(),
+        name: trimmedName,
+        image,
         checked: false,
         note: '',
       })
     },
     updateExtraItem: (state, action) => {
-      const { id, name, note } = action.payload
+      const { id, name, note, image } = action.payload
       const targetItem = state.currentPlan.extraItems.find((item) => item.id === id)
 
       if (!targetItem) {
@@ -50,6 +66,7 @@ const plannerSlice = createSlice({
 
       targetItem.name = name
       targetItem.note = note
+      targetItem.image = image ?? targetItem.image ?? ''
     },
     toggleExtraItemChecked: (state, action) => {
       const targetItem = state.currentPlan.extraItems.find((item) => item.id === action.payload)
@@ -111,7 +128,7 @@ const plannerSlice = createSlice({
     },
     clearPlannerState: (state) => {
       state.currentPlan = {
-        id: createId('plan'),
+        id: createId(),
         weekLabel: '',
         notes: '',
         days: {
