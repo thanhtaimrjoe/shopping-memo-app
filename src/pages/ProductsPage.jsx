@@ -23,6 +23,7 @@ import {
   Table,
   Tag,
   Upload,
+  message,
 } from 'antd'
 import { useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -33,6 +34,8 @@ import {
   setProductSearchText,
   updateProduct,
 } from '../features/products/productsSlice.js'
+import { uploadProductImage } from '../lib/supabase.js'
+import { createId } from '../utils/helpers.js'
 
 const getBase64 = (file) =>
   new Promise((resolve, reject) => {
@@ -52,6 +55,9 @@ export function ProductsPage() {
   const [viewMode, setViewMode] = useState('table')
   const [imagePreview, setImagePreview] = useState('')
   const [uploadFileList, setUploadFileList] = useState([])
+  const [selectedImageFile, setSelectedImageFile] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [messageApi, contextHolder] = message.useMessage()
 
   const filteredProducts = useMemo(() => {
     const keyword = searchText.trim().toLowerCase()
@@ -67,6 +73,8 @@ export function ProductsPage() {
     setEditingProduct(null)
     setImagePreview('')
     setUploadFileList([])
+    setSelectedImageFile(null)
+    setIsSubmitting(false)
     form.resetFields()
     setIsModalOpen(false)
   }
@@ -75,6 +83,7 @@ export function ProductsPage() {
     setEditingProduct(null)
     setImagePreview('')
     setUploadFileList([])
+    setSelectedImageFile(null)
     form.resetFields()
     setIsModalOpen(true)
   }
@@ -82,6 +91,7 @@ export function ProductsPage() {
   const handleOpenEdit = (product) => {
     setEditingProduct(product)
     setImagePreview(product.image ?? '')
+    setSelectedImageFile(null)
     setUploadFileList(
       product.image
         ? [
@@ -99,23 +109,50 @@ export function ProductsPage() {
   }
 
   const handleSubmit = async () => {
-    const values = await form.validateFields()
-    const payload = {
-      name: values.name,
-      image: imagePreview,
-    }
+    try {
+      setIsSubmitting(true)
+      const values = await form.validateFields()
+      const productId = editingProduct?.id ?? createId()
+      let imageUrl = editingProduct?.image ?? ''
 
-    if (editingProduct) {
-      dispatch(updateProduct({ id: editingProduct.id, ...payload }))
-    } else {
-      dispatch(addProduct(payload))
-    }
+      if (selectedImageFile) {
+        imageUrl = await uploadProductImage({
+          productId,
+          file: selectedImageFile,
+        })
+      } else if (!uploadFileList.length) {
+        imageUrl = ''
+      }
 
-    resetProductModal()
+      const payload = {
+        id: productId,
+        name: values.name,
+        image: imageUrl,
+      }
+
+      if (editingProduct) {
+        dispatch(updateProduct(payload))
+      } else {
+        dispatch(addProduct(payload))
+      }
+
+      resetProductModal()
+      messageApi.success(editingProduct ? 'Đã cập nhật sản phẩm.' : 'Đã tạo sản phẩm mới.')
+    } catch (error) {
+      if (error?.errorFields) {
+        setIsSubmitting(false)
+        return
+      }
+
+      console.error('Failed to save product', error)
+      messageApi.error('Lưu sản phẩm thất bại. Kiểm tra lại upload ảnh hoặc kết nối Supabase nhé.')
+      setIsSubmitting(false)
+    }
   }
 
   const handleBeforeUpload = async (file) => {
     const preview = await getBase64(file)
+    setSelectedImageFile(file)
     setImagePreview(preview)
     setUploadFileList([
       {
@@ -132,6 +169,7 @@ export function ProductsPage() {
   const handleRemoveImage = () => {
     setImagePreview('')
     setUploadFileList([])
+    setSelectedImageFile(null)
   }
 
   const columns = [
@@ -184,137 +222,141 @@ export function ProductsPage() {
   ]
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <PageSection
-        title="Product Database"
-        description="Quản lý các sản phẩm hay mua, có thể gắn hình ảnh để xem nhanh khi lên danh sách đi siêu thị."
-        extra={
-          <Space wrap>
-            <Input.Search
-              placeholder="Tìm theo tên sản phẩm"
-              allowClear
-              value={searchText}
-              onChange={(event) => dispatch(setProductSearchText(event.target.value))}
-              style={{ width: 280 }}
-            />
-            <Segmented
-              value={viewMode}
-              onChange={setViewMode}
-              options={[
-                { label: 'Table', value: 'table', icon: <UnorderedListOutlined /> },
-                { label: 'Grid', value: 'grid', icon: <AppstoreOutlined /> },
-              ]}
-            />
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
-              Thêm sản phẩm
-            </Button>
-          </Space>
-        }
-      >
-        <div className="helper-text" style={{ marginBottom: 16 }}>
-          Hiện có {filteredProducts.length} sản phẩm{searchText ? ` khớp với từ khóa "${searchText}"` : ''}.
-        </div>
-
-        {viewMode === 'table' ? (
-          <Table rowKey="id" columns={columns} dataSource={filteredProducts} pagination={{ pageSize: 8 }} />
-        ) : filteredProducts.length ? (
-          <Row gutter={[16, 16]}>
-            {filteredProducts.map((product) => (
-              <Col xs={24} sm={12} lg={8} xl={6} key={product.id}>
-                <Card
-                  className="product-card"
-                  actions={[
-                    <Button key="edit" type="text" icon={<EditOutlined />} onClick={() => handleOpenEdit(product)}>
-                      Sửa
-                    </Button>,
-                    <Popconfirm
-                      key="delete"
-                      title="Xóa sản phẩm này?"
-                      okText="Xóa"
-                      cancelText="Hủy"
-                      onConfirm={() => dispatch(deleteProduct(product.id))}
-                    >
-                      <Button danger type="text" icon={<DeleteOutlined />}>
-                        Xóa
-                      </Button>
-                    </Popconfirm>,
-                  ]}
-                >
-                  <div className="product-card__image-wrap">
-                    {product.image ? (
-                      <Image
-                        preview={false}
-                        src={product.image}
-                        alt={product.name}
-                        className="product-card__image"
-                      />
-                    ) : (
-                      <div className="product-image product-image--placeholder product-card__image-placeholder">
-                        <Space direction="vertical" size={4} align="center">
-                          <PictureOutlined />
-                          <span>Chưa có ảnh</span>
-                        </Space>
-                      </div>
-                    )}
-                  </div>
-                  <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                    <strong>{product.name}</strong>
-                    <Tag color={product.image ? 'green' : 'default'}>
-                      {product.image ? 'Đã có ảnh' : 'Chưa có ảnh'}
-                    </Tag>
-                  </Space>
-                </Card>
-              </Col>
-            ))}
-          </Row>
-        ) : (
-          <Empty description="Không có sản phẩm nào khớp bộ lọc hiện tại." />
-        )}
-      </PageSection>
-
-      <Modal
-        title={editingProduct ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
-        open={isModalOpen}
-        onCancel={resetProductModal}
-        onOk={handleSubmit}
-        okText={editingProduct ? 'Lưu thay đổi' : 'Tạo sản phẩm'}
-        cancelText="Hủy"
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            label="Tên sản phẩm"
-            name="name"
-            rules={[{ required: true, message: 'Vui lòng nhập tên sản phẩm.' }]}
-          >
-            <Input placeholder="Ví dụ: Sữa TH ít đường" />
-          </Form.Item>
-
-          <Form.Item label="Hình ảnh" style={{ marginBottom: imagePreview ? 12 : 0 }}>
-            <Upload
-              accept="image/*"
-              listType="picture"
-              maxCount={1}
-              fileList={uploadFileList}
-              beforeUpload={handleBeforeUpload}
-              onRemove={handleRemoveImage}
-            >
-              <Button icon={<UploadOutlined />}>Chọn ảnh từ máy</Button>
-            </Upload>
-          </Form.Item>
-
-          {imagePreview ? (
-            <div className="product-form-preview">
-              <Image
-                src={imagePreview}
-                alt="Preview"
-                width={120}
-                height={120}
-                style={{ objectFit: 'cover', borderRadius: 12 }}
+    <>
+      {contextHolder}
+      <Space direction="vertical" size={16} style={{ width: '100%' }}>
+        <PageSection
+          title="Product Database"
+          description="Quản lý các sản phẩm hay mua, có thể gắn hình ảnh để xem nhanh khi lên danh sách đi siêu thị."
+          extra={
+            <Space wrap>
+              <Input.Search
+                placeholder="Tìm theo tên sản phẩm"
+                allowClear
+                value={searchText}
+                onChange={(event) => dispatch(setProductSearchText(event.target.value))}
+                style={{ width: 280 }}
               />
-            </div>
-          ) : null}
-        </Form>
-      </Modal>
-    </Space>
+              <Segmented
+                value={viewMode}
+                onChange={setViewMode}
+                options={[
+                  { label: 'Table', value: 'table', icon: <UnorderedListOutlined /> },
+                  { label: 'Grid', value: 'grid', icon: <AppstoreOutlined /> },
+                ]}
+              />
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
+                Thêm sản phẩm
+              </Button>
+            </Space>
+          }
+        >
+          <div className="helper-text" style={{ marginBottom: 16 }}>
+            Hiện có {filteredProducts.length} sản phẩm{searchText ? ` khớp với từ khóa "${searchText}"` : ''}.
+          </div>
+
+          {viewMode === 'table' ? (
+            <Table rowKey="id" columns={columns} dataSource={filteredProducts} pagination={{ pageSize: 8 }} />
+          ) : filteredProducts.length ? (
+            <Row gutter={[16, 16]}>
+              {filteredProducts.map((product) => (
+                <Col xs={24} sm={12} lg={8} xl={6} key={product.id}>
+                  <Card
+                    className="product-card"
+                    actions={[
+                      <Button key="edit" type="text" icon={<EditOutlined />} onClick={() => handleOpenEdit(product)}>
+                        Sửa
+                      </Button>,
+                      <Popconfirm
+                        key="delete"
+                        title="Xóa sản phẩm này?"
+                        okText="Xóa"
+                        cancelText="Hủy"
+                        onConfirm={() => dispatch(deleteProduct(product.id))}
+                      >
+                        <Button danger type="text" icon={<DeleteOutlined />}>
+                          Xóa
+                        </Button>
+                      </Popconfirm>,
+                    ]}
+                  >
+                    <div className="product-card__image-wrap">
+                      {product.image ? (
+                        <Image
+                          preview={false}
+                          src={product.image}
+                          alt={product.name}
+                          className="product-card__image"
+                        />
+                      ) : (
+                        <div className="product-image product-image--placeholder product-card__image-placeholder">
+                          <Space direction="vertical" size={4} align="center">
+                            <PictureOutlined />
+                            <span>Chưa có ảnh</span>
+                          </Space>
+                        </div>
+                      )}
+                    </div>
+                    <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                      <strong>{product.name}</strong>
+                      <Tag color={product.image ? 'green' : 'default'}>
+                        {product.image ? 'Đã có ảnh' : 'Chưa có ảnh'}
+                      </Tag>
+                    </Space>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          ) : (
+            <Empty description="Không có sản phẩm nào khớp bộ lọc hiện tại." />
+          )}
+        </PageSection>
+
+        <Modal
+          title={editingProduct ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
+          open={isModalOpen}
+          onCancel={resetProductModal}
+          onOk={handleSubmit}
+          okText={editingProduct ? 'Lưu thay đổi' : 'Tạo sản phẩm'}
+          cancelText="Hủy"
+          confirmLoading={isSubmitting}
+        >
+          <Form form={form} layout="vertical">
+            <Form.Item
+              label="Tên sản phẩm"
+              name="name"
+              rules={[{ required: true, message: 'Vui lòng nhập tên sản phẩm.' }]}
+            >
+              <Input placeholder="Ví dụ: Sữa TH ít đường" />
+            </Form.Item>
+
+            <Form.Item label="Hình ảnh" style={{ marginBottom: imagePreview ? 12 : 0 }}>
+              <Upload
+                accept="image/*"
+                listType="picture"
+                maxCount={1}
+                fileList={uploadFileList}
+                beforeUpload={handleBeforeUpload}
+                onRemove={handleRemoveImage}
+              >
+                <Button icon={<UploadOutlined />}>Chọn ảnh từ máy</Button>
+              </Upload>
+            </Form.Item>
+
+            {imagePreview ? (
+              <div className="product-form-preview">
+                <Image
+                  src={imagePreview}
+                  alt="Preview"
+                  width={120}
+                  height={120}
+                  style={{ objectFit: 'cover', borderRadius: 12 }}
+                />
+              </div>
+            ) : null}
+          </Form>
+        </Modal>
+      </Space>
+    </>
   )
 }

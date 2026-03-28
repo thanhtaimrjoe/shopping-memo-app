@@ -5,12 +5,14 @@ import { createId, normalizeText } from '../../utils/helpers.js'
 const getProductPayload = (payload) => {
   if (typeof payload === 'string') {
     return {
+      id: createId(),
       name: payload,
       image: '',
     }
   }
 
   return {
+    id: payload?.id ?? createId(),
     name: payload?.name ?? '',
     image: payload?.image ?? '',
   }
@@ -24,7 +26,7 @@ const productsSlice = createSlice({
   },
   reducers: {
     addProduct: (state, action) => {
-      const { name, image } = getProductPayload(action.payload)
+      const { id, name, image } = getProductPayload(action.payload)
       const trimmedName = name.trim()
       const normalizedName = normalizeText(trimmedName)
       const exists = state.items.some((product) => normalizeText(product.name) === normalizedName)
@@ -34,7 +36,7 @@ const productsSlice = createSlice({
       }
 
       state.items.unshift({
-        id: createId('product'),
+        id,
         name: trimmedName,
         image,
       })
