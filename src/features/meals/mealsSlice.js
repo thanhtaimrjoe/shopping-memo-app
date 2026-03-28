@@ -41,11 +41,8 @@ const mealsSlice = createSlice({
     setMealSearchText: (state, action) => {
       state.searchText = action.payload
     },
-    replaceMeals: (state, action) => {
-      state.items = action.payload
-    },
   },
 })
 
-export const { addMeal, updateMeal, deleteMeal, setMealSearchText, replaceMeals } = mealsSlice.actions
+export const { addMeal, updateMeal, deleteMeal, setMealSearchText } = mealsSlice.actions
 export const mealsReducer = mealsSlice.reducer

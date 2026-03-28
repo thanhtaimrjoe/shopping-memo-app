@@ -1,11 +1,9 @@
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import { DeleteOutlined, PlusOutlined, PictureOutlined } from '@ant-design/icons'
 import {
   Button,
   Col,
-  Divider,
   Form,
   Input,
-  List,
   Row,
   Select,
   Space,
@@ -13,6 +11,7 @@ import {
   Typography,
 } from 'antd'
 import { useDispatch, useSelector } from 'react-redux'
+import { NoteActionButton } from '../components/NoteActionButton.jsx'
 import { PageSection } from '../components/PageSection.jsx'
 
 const { Text } = Typography
@@ -30,6 +29,7 @@ import { dayOptions } from '../utils/dayOptions.js'
 export function WeeklyPlannerPage() {
   const dispatch = useDispatch()
   const meals = useSelector((state) => state.meals.items)
+  const products = useSelector((state) => state.products.items)
   const plan = useSelector((state) => state.planner.currentPlan)
   const [extraItemForm] = Form.useForm()
 
@@ -93,78 +93,105 @@ export function WeeklyPlannerPage() {
 
       <PageSection
         title="Mua thêm"
-        description="Dùng cho các món không gắn trực tiếp với thực đơn, ví dụ sữa, snack, tissue."
+        description="Tổ chức theo dạng grid để sau này dễ gắn thêm hình ảnh, và vẫn tiện quản lý các món mua rời ngoài thực đơn."
       >
-        <Form
-          form={extraItemForm}
-          layout="inline"
-          onFinish={(values) => {
-            dispatch(addExtraItem(values.name))
-            extraItemForm.resetFields()
-          }}
+        <PageSection
+          title="Thêm item mới"
+          description="Tạo nhanh một card mới cho danh sách mua thêm. Sau này phần này có thể mở rộng sang upload ảnh sản phẩm."
         >
-          <Form.Item
-            name="name"
-            style={{ flex: 1, minWidth: 280 }}
-            rules={[{ required: true, message: 'Vui lòng nhập item cần mua.' }]}
+          <Form
+            form={extraItemForm}
+            layout="vertical"
+            onFinish={(values) => {
+              dispatch(addExtraItem(values.name))
+              extraItemForm.resetFields()
+            }}
           >
-            <Input placeholder="Nhập item mua thêm" />
-          </Form.Item>
-          <Form.Item>
-            <Button htmlType="submit" type="primary" icon={<PlusOutlined />}>
-              Thêm
-            </Button>
-          </Form.Item>
-        </Form>
+            <Space style={{ width: '100%' }} align="start" wrap>
+              <Form.Item
+                name="name"
+                style={{ flex: 1, minWidth: 280, marginBottom: 0 }}
+                rules={[{ required: true, message: 'Vui lòng chọn item cần mua.' }]}
+              >
+                <Select
+                  showSearch
+                  size="large"
+                  placeholder="Chọn từ Product Database"
+                  optionFilterProp="label"
+                  options={products.map((product) => ({
+                    label: product.name,
+                    value: product.name,
+                  }))}
+                />
+              </Form.Item>
+              <Form.Item style={{ marginBottom: 0 }}>
+                <Button htmlType="submit" type="primary" size="large" icon={<PlusOutlined />}>
+                  Thêm từ database
+                </Button>
+              </Form.Item>
+            </Space>
+          </Form>
+        </PageSection>
 
-        <Divider />
+        <div className="extra-items-grid">
+          {plan.extraItems.map((item) => (
+            <PageSection
+              key={item.id}
+              title={item.name}
+              description={item.checked ? 'Đã có / đã xử lý' : 'Đang chờ xử lý'}
+            >
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                <div className="extra-item-card__placeholder">
+                  <Space direction="vertical" size={6} align="center">
+                    <PictureOutlined style={{ fontSize: 24 }} />
+                    <span>Chỗ dành cho hình ảnh sản phẩm</span>
+                  </Space>
+                </div>
 
-        <List
-          dataSource={plan.extraItems}
-          locale={{ emptyText: 'Chưa có item mua thêm.' }}
-          renderItem={(item) => (
-            <List.Item
-              actions={[
+                <div className="extra-item-card__actions">
+                  <Tag color={item.checked ? 'green' : 'gold'}>
+                    {item.checked ? 'Đã có / đã xử lý' : 'Cần mua'}
+                  </Tag>
+
+                  <div className="extra-item-card__actions-right">
+                    <NoteActionButton
+                      note={item.note}
+                      onSave={(note) =>
+                        dispatch(
+                          updateExtraItem({
+                            id: item.id,
+                            name: item.name,
+                            note,
+                          }),
+                        )
+                      }
+                      emptyLabel="Thêm ghi chú"
+                      editLabel="Sửa ghi chú"
+                      iconOnly
+                    />
+                    <Button
+                      danger
+                      type="text"
+                      icon={<DeleteOutlined />}
+                      onClick={() => dispatch(deleteExtraItem(item.id))}
+                      aria-label="Xóa item"
+                    />
+                  </div>
+                </div>
+
+                {item.note ? <Text className="helper-text">{item.note}</Text> : null}
+
                 <Button
-                  key="toggle"
+                  block
                   type={item.checked ? 'default' : 'primary'}
                   onClick={() => dispatch(toggleExtraItemChecked(item.id))}
                 >
                   {item.checked ? 'Bỏ đánh dấu' : 'Đánh dấu đã có'}
-                </Button>,
-                <Button
-                  key="delete"
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={() => dispatch(deleteExtraItem(item.id))}
-                />,
-              ]}
-            >
-              <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                <Space wrap>
-                  <strong>{item.name}</strong>
-                  {item.checked ? <Tag color="green">Đã có / đã xử lý</Tag> : null}
-                </Space>
-                <Input
-                  value={item.note}
-                  placeholder="Ghi chú, ví dụ: đã có ở nhà"
-                  onChange={(event) =>
-                    dispatch(
-                      updateExtraItem({
-                        id: item.id,
-                        name: item.name,
-                        note: event.target.value,
-                      }),
-                    )
-                  }
-                />
-                <Text className="helper-text">
-                  Tip: phần note này sẽ hiện lại ở Shopping Checklist.
-                </Text>
+                </Button>
               </Space>
-            </List.Item>
-          )}
-        />
+            </PageSection>
+          ))}
+        </div>
       </PageSection>
     </Space>
   )

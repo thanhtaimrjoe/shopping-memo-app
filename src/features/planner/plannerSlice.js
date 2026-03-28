@@ -8,6 +8,7 @@ const plannerSlice = createSlice({
     currentPlan: createInitialWeeklyPlan(),
     checklistState: {},
     checklistFilter: 'all',
+    lastChecklistToggle: null,
   },
   reducers: {
     setWeekLabel: (state, action) => {
@@ -21,6 +22,14 @@ const plannerSlice = createSlice({
       const name = action.payload.trim()
 
       if (!name) {
+        return
+      }
+
+      const exists = state.currentPlan.extraItems.some(
+        (item) => item.name.trim().toLowerCase() === name.toLowerCase(),
+      )
+
+      if (exists) {
         return
       }
 
@@ -60,9 +69,14 @@ const plannerSlice = createSlice({
     toggleChecklistItemChecked: (state, action) => {
       const itemId = action.payload
       const currentState = state.checklistState[itemId] ?? { checked: false, note: '' }
+      const nextChecked = !currentState.checked
       state.checklistState[itemId] = {
         ...currentState,
-        checked: !currentState.checked,
+        checked: nextChecked,
+      }
+      state.lastChecklistToggle = {
+        id: itemId,
+        previousChecked: currentState.checked,
       }
     },
     updateChecklistItemNote: (state, action) => {
@@ -76,15 +90,24 @@ const plannerSlice = createSlice({
     setChecklistFilter: (state, action) => {
       state.checklistFilter = action.payload
     },
-    replacePlan: (state, action) => {
-      state.currentPlan = action.payload
-      state.checklistState = {}
-      state.checklistFilter = 'all'
+    undoLastChecklistToggle: (state) => {
+      if (!state.lastChecklistToggle) {
+        return
+      }
+
+      const { id, previousChecked } = state.lastChecklistToggle
+      const currentState = state.checklistState[id] ?? { checked: false, note: '' }
+      state.checklistState[id] = {
+        ...currentState,
+        checked: previousChecked,
+      }
+      state.lastChecklistToggle = null
     },
     resetPlannerState: (state) => {
       state.currentPlan = createInitialWeeklyPlan()
       state.checklistState = {}
       state.checklistFilter = 'all'
+      state.lastChecklistToggle = null
     },
     clearPlannerState: (state) => {
       state.currentPlan = {
@@ -104,6 +127,7 @@ const plannerSlice = createSlice({
       }
       state.checklistState = {}
       state.checklistFilter = 'all'
+      state.lastChecklistToggle = null
     },
   },
 })
@@ -119,7 +143,7 @@ export const {
   toggleChecklistItemChecked,
   updateChecklistItemNote,
   setChecklistFilter,
-  replacePlan,
+  undoLastChecklistToggle,
   resetPlannerState,
   clearPlannerState,
 } = plannerSlice.actions
@@ -187,14 +211,16 @@ export const selectChecklistItems = createSelector([selectPlan, selectMeals, sel
 export const selectFilteredChecklistItems = createSelector(
   [selectChecklistItems, selectChecklistFilterValue],
   (items, filter) => {
+    const sortedItems = [...items].sort((a, b) => Number(a.checked) - Number(b.checked))
+
     if (filter === 'pending') {
-      return items.filter((item) => !item.checked)
+      return sortedItems.filter((item) => !item.checked)
     }
 
     if (filter === 'done') {
-      return items.filter((item) => item.checked)
+      return sortedItems.filter((item) => item.checked)
     }
 
-    return items
+    return sortedItems
   },
 )

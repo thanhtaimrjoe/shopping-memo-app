@@ -1,4 +1,4 @@
-import { Col, List, Progress, Row, Space, Tag, Typography } from 'antd'
+import { Col, List, Row, Space, Tag, Typography } from 'antd'
 import { useMemo } from 'react'
 import { useSelector } from 'react-redux'
 import { PageSection } from '../components/PageSection.jsx'
@@ -12,17 +12,18 @@ export function DashboardPage() {
   const products = useSelector((state) => state.products.items)
   const plan = useSelector((state) => state.planner.currentPlan)
   const checklistItems = useSelector(selectChecklistItems)
-  const completedChecklistCount = checklistItems.filter((item) => item.checked).length
-  const completionPercent = checklistItems.length
-    ? Math.round((completedChecklistCount / checklistItems.length) * 100)
-    : 0
+
+  const mealMap = useMemo(
+    () => Object.fromEntries(meals.map((meal) => [meal.id, meal.name])),
+    [meals],
+  )
 
   const daySummary = useMemo(() => {
     return dayOptions.map((day) => ({
       ...day,
-      count: plan.days[day.key]?.length ?? 0,
+      mealNames: (plan.days[day.key] ?? []).map((mealId) => mealMap[mealId]).filter(Boolean),
     }))
-  }, [plan.days])
+  }, [mealMap, plan.days])
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
@@ -47,18 +48,6 @@ export function DashboardPage() {
         </Col>
       </Row>
 
-      <PageSection
-        title="Checklist progress"
-        description="Theo dõi nhanh tiến độ chuẩn bị đi siêu thị trong tuần hiện tại."
-      >
-        <Space direction="vertical" size={12} style={{ width: '100%' }}>
-          <Progress percent={completionPercent} status="active" />
-          <Text className="helper-text">
-            Đã xử lý {completedChecklistCount}/{checklistItems.length} item.
-          </Text>
-        </Space>
-      </PageSection>
-
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={14}>
           <PageSection
@@ -69,11 +58,19 @@ export function DashboardPage() {
               dataSource={daySummary}
               renderItem={(item) => (
                 <List.Item>
-                  <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                  <Space direction="vertical" size={10} style={{ width: '100%' }}>
                     <Text strong>{item.label}</Text>
-                    <Tag color={item.count > 0 ? 'blue' : 'default'}>
-                      {item.count} món
-                    </Tag>
+                    {item.mealNames.length > 0 ? (
+                      <div className="tag-list">
+                        {item.mealNames.map((mealName) => (
+                          <Tag key={`${item.key}-${mealName}`} color="blue">
+                            {mealName}
+                          </Tag>
+                        ))}
+                      </div>
+                    ) : (
+                      <Text className="helper-text">Chưa chọn món cho ngày này.</Text>
+                    )}
                   </Space>
                 </List.Item>
               )}
